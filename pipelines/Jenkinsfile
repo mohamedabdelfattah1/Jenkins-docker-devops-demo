@@ -1,37 +1,35 @@
 pipeline {
-    agent {
-        docker {
-            image 'node:18-alpine'
-            args '-u root'
-        }
-    }
+    agent any
 
     stages {
-        stage('Checkout') {
+        stage('Build NGINX Image') {
             steps {
-                git 'https://github.com/heroku/node-js-sample.git'
+                sh '''
+                  docker build -t custom-nginx:1.0 ./nginx
+                '''
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Deploy NGINX') {
             steps {
-                sh 'npm install'
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-                sh 'npm test || echo "No tests defined"'
+                sh '''
+                  docker rm -f prod-nginx || true
+                  docker run -d \
+                    --name prod-nginx \
+                    -p 80:80 \
+                    custom-nginx:1.0
+                '''
             }
         }
     }
 
     post {
         success {
-            echo 'Pipeline completed successfully'
+            echo 'NGINX deployed successfully'
         }
         failure {
-            echo 'Pipeline failed'
+            echo 'Deployment failed'
         }
     }
 }
+
